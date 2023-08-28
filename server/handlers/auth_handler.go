@@ -23,6 +23,11 @@ func NewAuthHandler(server *s.Server) *AuthHandler {
 	return &AuthHandler{server: server}
 }
 
+func HashPassword(password string) (string, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	return string(bytes), err
+}
+
 // Login godoc
 // @Summary Authenticate a user
 // @Description Perform user login
@@ -49,7 +54,8 @@ func (authHandler *AuthHandler) Login(c echo.Context) error {
 	userRepository := repositories.NewUserRepository(authHandler.server.DB)
 	userRepository.GetUserByEmail(&user, loginRequest.Email)
 
-	if user.ID == 0 || (bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginRequest.Password)) != nil) {
+	hashedPassword, err := HashPassword(user.Password)
+	if user.ID == 0 || (bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(loginRequest.Password)) != nil) {
 		return responses.ErrorResponse(c, http.StatusUnauthorized, "Invalid credentials")
 	}
 
